@@ -1,0 +1,3 @@
+# Brick topQuadrant SHACL wrapper
+
+
