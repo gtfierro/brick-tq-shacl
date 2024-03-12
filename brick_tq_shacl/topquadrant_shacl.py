@@ -79,7 +79,7 @@ def infer(
             )
             try:
                 logging.debug(f"Running {script} -datafile {target_file_path}")
-                output = subprocess.check_output(
+                process = subprocess.Popen(
                     [
                         *script,
                         "-datafile",
@@ -87,10 +87,22 @@ def infer(
                         "-maxiterations",
                         str(max_iterations),
                     ],
+                process = subprocess.Popen(
+                    [*script, "-datafile", target_file_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
                     env=env,
                 )
+                stdout, stderr = process.communicate()
+                if process.returncode != 0:
+                    raise Exception(f"SHA-CL validation failed with error: {stderr}")
+                output = stdout
+                stdout, stderr = process.communicate()
+                if process.returncode != 0:
+                    raise Exception(f"SHA-CL inference failed with error: {stderr}")
+                output = stdout
             except subprocess.CalledProcessError as e:
                 output = e.output  # Capture the output of the failed subprocess
             # Write logs to a file in the temporary directory (or the desired location)
