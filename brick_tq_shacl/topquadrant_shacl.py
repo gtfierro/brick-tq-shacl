@@ -7,7 +7,9 @@ from rdflib.term import BNode, URIRef, _SKOLEM_DEFAULT_AUTHORITY, rdflib_skolem_
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin
+import logging
 
+logger = logging.getLogger(__name__)
 
 # monkeypatch BNode.skolemize with a new function
 def _new_bnode_skolemize(
@@ -76,7 +78,7 @@ def infer(
                 target_file_path, format="turtle"
             )
             try:
-                print(f"Running {script} -datafile {target_file_path}")
+                logging.debug(f"Running {script} -datafile {target_file_path}")
                 output = subprocess.check_output(
                     [
                         *script,
@@ -99,7 +101,7 @@ def infer(
                         f.write(f"{line}\n")
             inferred_triples = rdflib.Graph()
             inferred_triples.parse(inferred_file_path, format="turtle")
-            print(f"Got {len(inferred_triples)} inferred triples")
+            logging.debug(f"Got {len(inferred_triples)} inferred triples")
             for s, p, o in inferred_triples:
                 if isinstance(s, BNode) or isinstance(o, BNode):
                     continue
@@ -147,7 +149,7 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
                 str(Path(__file__).parent / "topquadrant_shacl/bin/shaclvalidate.sh"),
             ]
         try:
-            print(f"Running {script} -datafile {target_file_path}")
+            logging.debug(f"Running {script} -datafile {target_file_path}")
             output = subprocess.check_output(
                 [*script, "-datafile", target_file_path],
                 stderr=subprocess.STDOUT,
