@@ -86,5 +86,4 @@ elif [ -n "$TMP" ]
 	JVM_ARGS="$JVM_ARGS -Djava.io.tmpdir=\"$TMP\""
 fi
 
-set -ex
 java $JVM_ARGS $LOGGING -cp "$SHACL_CP" org.topbraid.shacl.tools.Validate "$@" 
