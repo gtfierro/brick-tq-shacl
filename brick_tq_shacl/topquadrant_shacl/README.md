@@ -2,7 +2,8 @@
 
 **An open source implementation of the W3C Shapes Constraint Language (SHACL) based on Apache Jena.**
 
-Contact: Holger Knublauch (holger@topquadrant.com)
+Contact: Ashley Caselli (ashley.caselli@unige.ch)\
+Original developer: Holger Knublauch (holger@topquadrant.com)
 
 Can be used to perform SHACL constraint checking and rule inferencing in any Jena-based Java application.
 This API also serves as a reference implementation of the SHACL spec.
@@ -41,6 +42,7 @@ Releases are available in the central maven repository:
   <version>*VER*</version>
 </dependency>
 ```
+
 ## Command Line Usage
 
 Download the latest release from:
@@ -58,7 +60,7 @@ To use them, set up your environment similar to https://jena.apache.org/document
 For example, on Windows:
 
 ```
-SET SHACLROOT=C:\Users\Holger\Desktop\shacl-1.4.1-bin
+SET SHACLROOT=C:\Users\Holger\Desktop\shacl-1.4.2-bin
 SET PATH=%PATH%;%SHACLROOT%\bin
 ```
 
@@ -66,7 +68,7 @@ As another example, for Linux, add to .bashrc these lines:
 
 ```
 # for shacl
-export SHACLROOT=/home/holger/shacl/shacl-1.4.1-bin/shacl-1.4.1/bin
+export SHACLROOT=/home/holger/shacl/shacl-1.4.2-bin/shacl-1.4.2/bin
 export PATH=$SHACLROOT:$PATH 
 ```
 
@@ -77,6 +79,59 @@ Both tools take the following parameters, for example:
 where `-shapesfile` is optional and falls back to using the data graph as shapes graph.
 Add -validateShapes in case you want to include the metashapes (from the tosh namespace in particular).
 
+For the shaclinfer tool, you can use the `-maxiterations` argument to apply SHACL rule inferencing multiple times; this will add inferred results back to the data graph to see if further triples can be inferred.
+The tool will iterate until either (a) the maximum number of iterations is reached, or (b) no new triples are inferred. The flag is optional and defaults to `1` (single iteration).
+
 Currently only Turtle (.ttl) files are supported.
 
 The tools print the validation report or the inferences graph to the output screen.
+
+## Dockerfile Usage
+
+The `Dockerfile` in the `.docker` folder includes a minimal Java Runtime Environment for the SHACL API that clocks in at ~85Mb. To get the latest release of the image use:
+
+```
+docker build -f .docker/Dockerfile -t ghcr.io/topquadrant/shacl:1.4.2 --build-arg VERSION=1.4.2 .
+```
+> :warning: It is generally better to use a fixed version of the docker image, rather than the `latest` tag. Consult the package page to find what versions are available.
+
+To use the Docker image, there are two possible commands. To run the validator:
+
+```
+docker run --rm -v /path/to/data:/data ghcr.io/topquadrant/shacl:1.4.2 validate -datafile /data/myfile.ttl -shapesfile /data/myshapes.ttl
+```
+
+To run rule inferencing:
+
+```
+docker run --rm -v /path/to/data:/data ghcr.io/topquadrant/shacl:1.4.2 infer -datafile /data/myfile.ttl -shapesfile /data/myshapes.ttl
+```
+
+Any other command after `ghcr.io/topquadrant/shacl:1.4.2` will print the following help page:
+
+```
+Please use this docker image as follows:
+docker run -v /path/to/data:/data ghcr.io/topquadrant/shacl:1.4.2 [COMMAND] [PARAMETERS]
+COMMAND:
+	validate 
+		to run validation
+	infer
+		to run rule inferencing
+PARAMETERS:
+	-datafile /data/myfile.ttl [MANDATORY]
+		input to be validated (only .ttl format supported)
+	-shapesfile /data/myshapes.ttl [OPTIONAL]
+		shapes for validation (only .ttl format supported)
+```
+
+If you'd like to build the image locally in an `x86` architecture, use:
+
+```
+docker build -f .docker/Dockerfile -t ghcr.io/topquadrant/shacl:1.4.2 --build-arg VERSION=1.4.2 --build-arg ARCH_BASE=eclipse-temurin:11-alpine .
+```
+
+If your architecture is `arm`, use:
+
+```
+docker build -f .docker/Dockerfile -t ghcr.io/topquadrant/shacl:1.4.2 --build-arg VERSION=1.4.2 --build-arg ARCH_BASE=amd64/eclipse-temurin:11-alpine .
+```
