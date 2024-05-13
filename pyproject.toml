@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "brick-tq-shacl"
-version = "0.2.0"
+version = "0.3.3a2"
 description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper"
 authors = ["Gabe Fierro <gtfierro@mines.edu>"]
 include = ["brick_tq_shacl/topquadrant_shacl"]

@@ -36,11 +36,13 @@ def infer(
     data_graph: rdflib.Graph, ontologies: rdflib.Graph, max_iterations: int = 100
 ):
     # remove imports
-    imports = data_graph.triples((None, OWL.imports, None))
+    imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
+    # remove imports from ontologies too
+    ontology_imports = ontologies.remove((None, OWL.imports, None))
 
     # skolemize before inference
-    data_graph_skolemized = data_graph.skolemize()
+    data_graph_skolemized = data_graph
 
     # Create a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -51,6 +53,9 @@ def infer(
         (data_graph_skolemized + ontologies).serialize(
             target_file_path, format="turtle"
         )
+        # add imports back
+        for imp in ontology_imports:
+            ontologies.add(imp)
 
         # set the SHACL_HOME environment variable to point to the shacl-1.4.2 directory
         # so that the shaclinfer.sh script can find the shacl.jar file
@@ -79,7 +84,7 @@ def infer(
             )
             try:
                 logging.debug(f"Running {script} -datafile {target_file_path}")
-                process = subprocess.Popen(
+                proc = subprocess.run(
                     [
                         *script,
                         "-datafile",
@@ -87,33 +92,25 @@ def infer(
                         "-maxiterations",
                         str(max_iterations),
                     ],
-                process = subprocess.Popen(
-                    [*script, "-datafile", target_file_path],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
+                    capture_output=True,
                     universal_newlines=True,
+                    check=False,
                     env=env,
                 )
-                stdout, stderr = process.communicate()
-                if process.returncode != 0:
-                    raise Exception(f"SHA-CL validation failed with error: {stderr}")
-                output = stdout
-                stdout, stderr = process.communicate()
-                if process.returncode != 0:
-                    raise Exception(f"SHA-CL inference failed with error: {stderr}")
-                output = stdout
             except subprocess.CalledProcessError as e:
-                output = e.output  # Capture the output of the failed subprocess
+                raise Exception(f"Error running shaclinfer: {e.output}")
             # Write logs to a file in the temporary directory (or the desired location)
             inferred_file_path = temp_dir_path / "inferred.ttl"
             with open(inferred_file_path, "w") as f:
-                for line in output.splitlines():
+                for line in proc.stdout.splitlines():
                     if "::" not in line:
                         f.write(f"{line}\n")
-            inferred_triples = rdflib.Graph()
-            inferred_triples.parse(inferred_file_path, format="turtle")
-            logging.debug(f"Got {len(inferred_triples)} inferred triples")
+            try:
+                inferred_triples = rdflib.Graph()
+                inferred_triples.parse(inferred_file_path, format="turtle")
+                logging.debug(f"Got {len(inferred_triples)} inferred triples")
+            except Exception as e:
+                raise Exception(f"Error parsing inferred triples: {e}\nMaybe due to SHACL inference process exception?\n{proc.stderr}")
             for s, p, o in inferred_triples:
                 if isinstance(s, BNode) or isinstance(o, BNode):
                     continue
@@ -124,7 +121,7 @@ def infer(
             current_size = len(data_graph_skolemized)
             current_iter += 1
 
-        expanded_graph = data_graph_skolemized.de_skolemize()
+        expanded_graph = data_graph_skolemized
         # add imports back in
         for imp in imports:
             expanded_graph.add(imp)
@@ -147,7 +144,8 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
 
         inferred_graph = infer(data_graph, shape_graphs)
 
-        inferred_graph.serialize(target_file_path, format="ttl")
+        # combine the inferred graph with the shape graphs
+        (inferred_graph + shape_graphs).serialize(target_file_path, format="ttl")
 
         # get the shacl-1.4.2/bin/shaclvalidate.sh script from the same directory
         # as this file
@@ -162,24 +160,33 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
             ]
         try:
             logging.debug(f"Running {script} -datafile {target_file_path}")
-            output = subprocess.check_output(
-                [*script, "-datafile", target_file_path],
-                stderr=subprocess.STDOUT,
+            proc = subprocess.run(
+                [
+                    *script,
+                    "-datafile",
+                    target_file_path,
+                    "-maxiterations",
+                    "100",
+                ],
+                capture_output=True,
                 universal_newlines=True,
+                check=False,
                 env=env,
             )
         except subprocess.CalledProcessError as e:
-            output = e.output  # Capture the output of the failed subprocess
+            raise Exception(f"Error running shaclinfer: {e.output}")
 
         # Write logs to a file in the temporary directory (or the desired location)
         report_file_path = temp_dir_path / "report.ttl"
         with open(report_file_path, "w") as f:
-            for line in output.splitlines():
+            for line in proc.stdout.splitlines():
                 if "::" not in line:  # filter out log output
                     f.write(f"{line}\n")
-
-        report_g = rdflib.Graph()
-        report_g.parse(report_file_path, format="turtle")
+        try:
+            report_g = rdflib.Graph()
+            report_g.parse(report_file_path, format="turtle")
+        except Exception as e:
+            raise Exception(f"Error parsing report: {e}\nMaybe due to SHACL validation process exception?\n{proc.stderr}")
 
         # check if there are any sh:resultSeverity sh:Violation predicate/object pairs
         has_violation = len(
