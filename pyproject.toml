@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "brick-tq-shacl"
-version = "0.3.3a2"
+version = "0.3.3"
 description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper"
 authors = ["Gabe Fierro <gtfierro@mines.edu>"]
 include = ["brick_tq_shacl/topquadrant_shacl"]
@@ -8,7 +8,7 @@ license = "bsd-3-clause"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.8.1,<4.0"
 rdflib = "^7.0"
 
 
