@@ -29,7 +29,7 @@ def _new_bnode_skolemize(
 
 
 BNode.skolemize = _new_bnode_skolemize
-_MAX_EXTERNAL_LOOPS = 3
+_MAX_EXTERNAL_LOOPS = 10
 
 
 def infer(
