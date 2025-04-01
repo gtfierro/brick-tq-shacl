@@ -1,6 +1,8 @@
+import subprocess
+from pytqshacl.run import infer as pytqshacl_infer, validate as pytqshacl_validate
+import platform
 import tempfile
 import rdflib
-from pytqshacl.run import infer as pytqshacl_infer, validate as pytqshacl_validate
 from rdflib import OWL, SH
 from rdflib.term import BNode, URIRef, _SKOLEM_DEFAULT_AUTHORITY, rdflib_skolem_genid
 from pathlib import Path
@@ -31,6 +33,38 @@ BNode.skolemize = _new_bnode_skolemize
 _MAX_EXTERNAL_LOOPS = 10
 
 
+def infer2(
+        data_graph: rdflib.Graph, ontologies: rdflib.Graph, max_iterations: int = 100
+        ):
+    # remove imports
+    imports = list(data_graph.triples((None, OWL.imports, None)))
+    data_graph.remove((None, OWL.imports, None))
+    data_graph = data_graph.skolemize()
+    # remove imports from ontologies too
+    ontologies.remove((None, OWL.imports, None))
+
+    # create a temporary directory and save the data_graph and ontologies to data.ttl and ontologies.ttl respectively
+    with tempfile.TemporaryDirectory() as temp_dir:
+        data_graph_path = Path(temp_dir) / "data.ttl"
+        data_graph.serialize(data_graph_path, format="turtle")
+        ontologies_path = Path(temp_dir) / "ontologies.ttl"
+        ontologies.serialize(ontologies_path, format="turtle")
+
+        # run the pytqshacl_infer function
+        inferred_graph = pytqshacl_infer(data_graph_path, shapes=ontologies_path)
+        print(inferred_graph)
+        print(type(inferred_graph))
+
+        # parse stdout into a graph
+        inferred_triples = rdflib.Graph()
+        inferred_triples.parse(data=inferred_graph.stdout, format="turtle")
+        inferred_triples = inferred_triples + data_graph
+        # add imports back
+        for imp in imports:
+            inferred_triples.add(imp)
+        return inferred_triples.de_skolemize()
+
+
 def infer(
     data_graph: rdflib.Graph, ontologies: rdflib.Graph, max_iterations: int = 100
 ):
@@ -56,15 +90,69 @@ def infer(
         for imp in ontology_imports:
             ontologies.add(imp)
 
-        # Use pytqshacl's infer method
-        inferred_graph = pytqshacl_infer(target_file_path, shapes=None)
-        inferred_triples = rdflib.Graph()
-        inferred_triples.parse(data=inferred_graph, format="turtle")
-        logging.debug(f"Got {len(inferred_triples)} inferred triples")
-        for s, p, o in inferred_triples:
-            if isinstance(s, BNode) or isinstance(o, BNode):
-                continue
-            data_graph_skolemized.add((s, p, o))
+        # set the SHACL_HOME environment variable to point to the shacl-1.4.2 directory
+        # so that the shaclinfer.sh script can find the shacl.jar file
+        env = {"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")}
+        # get the shacl-1.4.2/bin/shaclinfer.sh script from brickschema.bin in this package
+        # using pkgutil. If using *nix, use .sh; else if on windows use .bat
+        if platform.system() == "Windows":
+            script = [
+                str(Path(__file__).parent / "topquadrant_shacl/bin/shaclinfer.bat")
+            ]
+        else:
+            script = [
+                "/bin/sh",
+                str(Path(__file__).parent / "topquadrant_shacl/bin/shaclinfer.sh"),
+            ]
+
+        # Initialize the size of the graph
+        previous_size = 0
+        current_size = len(data_graph_skolemized)
+        current_iter = 0
+
+        # Run the shaclinfer multiple times until the skolemized data graph stops changing in size
+        while previous_size != current_size and current_iter < _MAX_EXTERNAL_LOOPS:
+            (data_graph_skolemized + ontologies).serialize(
+                target_file_path, format="turtle"
+            )
+            try:
+                logging.debug(f"Running {script} -datafile {target_file_path}")
+                proc = subprocess.run(
+                    [
+                        *script,
+                        "-datafile",
+                        target_file_path,
+                        "-maxiterations",
+                        str(max_iterations),
+                    ],
+                    capture_output=True,
+                    universal_newlines=True,
+                    check=False,
+                    env=env,
+                )
+            except subprocess.CalledProcessError as e:
+                raise Exception(f"Error running shaclinfer: {e.output}")
+            # Write logs to a file in the temporary directory (or the desired location)
+            inferred_file_path = temp_dir_path / "inferred.ttl"
+            with open(inferred_file_path, "w") as f:
+                for line in proc.stdout.splitlines():
+                    if "::" not in line:
+                        f.write(f"{line}\n")
+            try:
+                inferred_triples = rdflib.Graph()
+                inferred_triples.parse(inferred_file_path, format="turtle")
+                logging.debug(f"Got {len(inferred_triples)} inferred triples")
+            except Exception as e:
+                raise Exception(f"Error parsing inferred triples: {e}\nMaybe due to SHACL inference process exception?\n{proc.stderr}")
+            for s, p, o in inferred_triples:
+                if isinstance(s, BNode) or isinstance(o, BNode):
+                    continue
+                data_graph_skolemized.add((s, p, o))
+
+            # Update the size of the graph
+            previous_size = current_size
+            current_size = len(data_graph_skolemized)
+            current_iter += 1
 
         expanded_graph = data_graph_skolemized
         # add imports back in
@@ -77,20 +165,61 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
     # remove imports
     data_graph.remove((None, OWL.imports, None))
 
+    # set the SHACL_HOME environment variable to point to the shacl-1.4.2 directory
+    # so that the shaclinfer.sh script can find the shacl.jar file
+    env = {"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")}
     # Create a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
 
         # Define the target path within the temporary directory
         target_file_path = temp_dir_path / "data.ttl"
-    inferred_graph = infer(data_graph, shape_graphs)
-    (inferred_graph + shape_graphs).serialize(target_file_path, format="ttl")
-    report, report_g, report_str = pytqshacl_validate(target_file_path, shapes=None)
-    try:
-        report_g = rdflib.Graph()
-        report_g.parse(data=report_str, format="turtle")
-    except Exception as e:
-        raise Exception(f"Error parsing report: {e}")
+
+        inferred_graph = infer(data_graph, shape_graphs)
+
+        # combine the inferred graph with the shape graphs
+        (inferred_graph + shape_graphs).serialize(target_file_path, format="ttl")
+
+        # get the shacl-1.4.2/bin/shaclvalidate.sh script from the same directory
+        # as this file
+        if platform.system() == "Windows":
+            script = [
+                str(Path(__file__).parent / "topquadrant_shacl/bin/shaclvalidate.bat")
+            ]
+        else:
+            script = [
+                "/bin/sh",
+                str(Path(__file__).parent / "topquadrant_shacl/bin/shaclvalidate.sh"),
+            ]
+        try:
+            logging.debug(f"Running {script} -datafile {target_file_path}")
+            proc = subprocess.run(
+                [
+                    *script,
+                    "-datafile",
+                    target_file_path,
+                    "-maxiterations",
+                    "100",
+                ],
+                capture_output=True,
+                universal_newlines=True,
+                check=False,
+                env=env,
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Error running shaclinfer: {e.output}")
+
+        # Write logs to a file in the temporary directory (or the desired location)
+        report_file_path = temp_dir_path / "report.ttl"
+        with open(report_file_path, "w") as f:
+            for line in proc.stdout.splitlines():
+                if "::" not in line:  # filter out log output
+                    f.write(f"{line}\n")
+        try:
+            report_g = rdflib.Graph()
+            report_g.parse(report_file_path, format="turtle")
+        except Exception as e:
+            raise Exception(f"Error parsing report: {e}\nMaybe due to SHACL validation process exception?\n{proc.stderr}")
 
         # check if there are any sh:resultSeverity sh:Violation predicate/object pairs
         has_violation = len(
