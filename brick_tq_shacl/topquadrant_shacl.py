@@ -77,7 +77,12 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
     # remove imports
     data_graph.remove((None, OWL.imports, None))
 
-    # Use pytqshacl's validate method
+    # Create a temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+
+        # Define the target path within the temporary directory
+        target_file_path = temp_dir_path / "data.ttl"
     inferred_graph = infer(data_graph, shape_graphs)
     (inferred_graph + shape_graphs).serialize(target_file_path, format="ttl")
     report, report_g, report_str = pytqshacl_validate(target_file_path, shapes=None)
