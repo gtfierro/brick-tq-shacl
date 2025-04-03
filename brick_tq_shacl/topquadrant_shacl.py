@@ -45,14 +45,12 @@ def infer(
     # create a temporary directory and save the data_graph and ontologies to data.ttl and ontologies.ttl respectively
     with tempfile.TemporaryDirectory() as temp_dir:
         data_graph_path = Path(temp_dir) / "data.ttl"
-        data_graph.serialize(data_graph_path, format="turtle")
+        (data_graph + ontologies).serialize(data_graph_path, format="turtle")
         ontologies_path = Path(temp_dir) / "ontologies.ttl"
-        ontologies.serialize(ontologies_path, format="turtle")
+        (data_graph + ontologies).serialize(ontologies_path, format="turtle")
 
         # run the pytqshacl_infer function
         inferred_graph = pytqshacl_infer(data_graph_path, shapes=ontologies_path)
-        print(inferred_graph)
-        print(type(inferred_graph))
 
         # parse stdout into a graph
         inferred_triples = rdflib.Graph()
@@ -84,7 +82,7 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
         shape_graphs_path = temp_dir_path / "shapes.ttl"
 
         # Serialize the graphs to files
-        data_graph_skolemized.serialize(data_graph_path, format="turtle")
+        (data_graph_skolemized + shape_graphs).serialize(data_graph_path, format="turtle")
         shape_graphs.serialize(shape_graphs_path, format="turtle")
 
         # Run the pytqshacl_validate function
