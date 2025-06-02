@@ -59,7 +59,7 @@ def infer(
 
         # set the SHACL_HOME environment variable to point to the shacl-1.4.2 directory
         # so that the shaclinfer.sh script can find the shacl.jar file
-        env = {"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")}
+        env.update({"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")})
         # get the shacl-1.4.2/bin/shaclinfer.sh script from brickschema.bin in this package
         # using pkgutil. If using *nix, use .sh; else if on windows use .bat
         if platform.system() == "Windows":
@@ -134,7 +134,7 @@ def validate(data_graph: rdflib.Graph, shape_graphs: rdflib.Graph):
 
     # set the SHACL_HOME environment variable to point to the shacl-1.4.2 directory
     # so that the shaclinfer.sh script can find the shacl.jar file
-    env = {"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")}
+    env.update({"SHACL_HOME": str(Path(__file__).parent / "topquadrant_shacl")})
     # Create a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
