@@ -64,7 +64,6 @@ def validate(
 
         # Run the pytqshacl_validate function
         validation_result = tqvalidate(data_graph_path, shapes=shape_graphs_path)
-        print(validation_result.stdout)
         # Parse the validation result into a graph
     # re-add imports
     for imp in imports:
