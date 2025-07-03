@@ -27,7 +27,7 @@ def infer(
         while data_graph_size_changed:
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
-            data_graph.serialize(target_file_path, format="turtle")
+            (data_graph + ontologies).serialize(target_file_path, format="turtle")
 
             inferred_graph = tqinfer(target_file_path, shapes=ontologies_file_path)
             # read the inferred graph
@@ -38,7 +38,7 @@ def infer(
     # re-add imports
     for imp in imports:
         data_graph.add(imp)
-    return data_graph.de_skolemize()
+    return data_graph
 
 
 def validate(

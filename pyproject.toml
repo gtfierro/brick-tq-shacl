@@ -10,7 +10,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
 rdflib = "^7.0"
-pytqshacl = { version = "^135"}
+pytqshacl = { version = "^140"}
 
 
 [build-system]
