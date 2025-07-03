@@ -21,8 +21,7 @@ def infer(
     TopQuadrant SHACL engine (`tqinfer`).
 
     Note: The function removes `owl:imports` statements from the graphs to process
-    them as self-contained units. These are restored before returning. The
-    `max_iterations` parameter is not currently used but is kept for future-proofing.
+    them as self-contained units. These are restored before returning.
 
     Args:
         data_graph (Graph): The RDF graph to be expanded with inferences.
@@ -49,9 +48,10 @@ def infer(
 
         data_graph_size = len(data_graph)
         data_graph_size_changed = True
+        current_iteration = 0
 
         # Iteratively apply inference until no new triples are generated
-        while data_graph_size_changed:
+        while data_graph_size_changed and current_iteration < max_iterations:
             print(f"Data graph size: {data_graph_size}")
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
@@ -68,6 +68,7 @@ def infer(
             # Check if the graph size has changed to continue or stop iterating
             data_graph_size_changed = len(data_graph) != data_graph_size
             data_graph_size = len(data_graph)
+            current_iteration += 1
     # re-add imports that were removed earlier
     for imp in imports:
         data_graph.add(imp)
