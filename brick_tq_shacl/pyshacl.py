@@ -25,11 +25,12 @@ def infer(
         data_graph_size_changed = True
 
         while data_graph_size_changed:
+            print(f"Data graph size: {data_graph_size}")
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
             (data_graph + ontologies).serialize(target_file_path, format="turtle")
 
-            inferred_graph = tqinfer(target_file_path, shapes=ontologies_file_path)
+            inferred_graph = tqinfer(target_file_path)
             # read the inferred graph
             inferred_graph = Graph().parse(data=inferred_graph.stdout, format="turtle")
             data_graph += inferred_graph
@@ -56,14 +57,12 @@ def validate(
 
         # Define the target path within the temporary directory
         data_graph_path = temp_dir_path / "data.ttl"
-        shape_graphs_path = temp_dir_path / "shapes.ttl"
 
         # Serialize the graphs to files
-        data_graph.serialize(data_graph_path, format="turtle")
-        shape_graphs.serialize(shape_graphs_path, format="turtle")
+        (data_graph + shape_graphs).serialize(data_graph_path, format="turtle")
 
         # Run the pytqshacl_validate function
-        validation_result = tqvalidate(data_graph_path, shapes=shape_graphs_path)
+        validation_result = tqvalidate(data_graph_path)
         # Parse the validation result into a graph
     # re-add imports
     for imp in imports:
