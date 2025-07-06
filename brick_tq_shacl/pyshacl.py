@@ -6,12 +6,12 @@ and iterative inference.
 from pytqshacl import infer as tqinfer, validate as tqvalidate
 from pathlib import Path
 import tempfile
-from typing import Tuple
+from typing import Tuple, Optional
 from rdflib import Graph, OWL, SH, Literal
 
 
 def infer(
-    data_graph: Graph, ontologies: Graph, max_iterations: int = 100
+    data_graph: Graph, ontologies: Optional[Graph] = None, max_iterations: int = 100
 ) -> Graph:
     """
     Performs SHACL-based inference on a data graph using a set of ontologies.
@@ -25,8 +25,10 @@ def infer(
 
     Args:
         data_graph (Graph): The RDF graph to be expanded with inferences.
-        ontologies (Graph): A graph containing SHACL shapes and ontology definitions
-                            to guide the inference process.
+        ontologies (Optional[Graph]): A graph containing SHACL shapes and ontology
+                                      definitions to guide the inference process. If not
+                                      provided, `data_graph` is assumed to contain the
+                                      ontologies.
         max_iterations (int): The maximum number of inference iterations.
 
     Returns:
@@ -36,7 +38,10 @@ def infer(
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
     # remove imports from ontologies too
-    ontologies.remove((None, OWL.imports, None))
+    if ontologies:
+        ontologies.remove((None, OWL.imports, None))
+    else:
+        ontologies = Graph()
 
     # Use a temporary directory to store intermediate RDF files
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -76,7 +81,7 @@ def infer(
 
 
 def validate(
-    data_graph: Graph, shape_graphs: Graph
+    data_graph: Graph, shape_graphs: Optional[Graph] = None
 ) -> Tuple[bool, str, Graph]:
     """
     Validates a data graph against a set of SHACL shapes.
@@ -89,7 +94,9 @@ def validate(
 
     Args:
         data_graph (Graph): The RDF graph to be validated.
-        shape_graphs (Graph): A graph containing the SHACL shapes.
+        shape_graphs (Optional[Graph]): A graph containing the SHACL shapes. If not
+                                        provided, `data_graph` is assumed to contain
+                                        the shapes.
 
     Returns:
         Tuple[bool, str, Graph]: A tuple containing:
@@ -104,7 +111,8 @@ def validate(
     # remove imports to treat graphs as self-contained
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
-    shape_graphs.remove((None, OWL.imports, None))
+    if shape_graphs:
+        shape_graphs.remove((None, OWL.imports, None))
 
     # Use a temporary directory to store intermediate RDF files
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -113,7 +121,10 @@ def validate(
         data_graph_path = temp_dir_path / "data.ttl"
 
         # Serialize the combined data and shape graphs to a file for validation
-        (data_graph + shape_graphs).serialize(data_graph_path, format="turtle")
+        graph_to_validate = data_graph
+        if shape_graphs:
+            graph_to_validate = graph_to_validate + shape_graphs
+        graph_to_validate.serialize(data_graph_path, format="turtle")
 
         # Run the TopQuadrant SHACL validation engine
         validation_result = tqvalidate(data_graph_path)
