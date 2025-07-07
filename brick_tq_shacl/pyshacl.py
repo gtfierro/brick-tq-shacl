@@ -10,6 +10,17 @@ from typing import Tuple, Optional
 from rdflib import Graph, OWL, SH, Literal
 
 
+def clean_stdout(stdout: str) -> str:
+    """
+    Cleans stdout by removing lines that get emitted by TopQuadrant.
+    """
+    lines = stdout.splitlines()
+    cleaned_lines = [
+            line for line in lines if not line.startswith("WARNING:") and not line.startswith("INFO:")
+    ]
+    return "\n".join(cleaned_lines)
+
+
 def infer(
     data_graph: Graph, ontologies: Optional[Graph] = None, max_iterations: int = 100
 ) -> Graph:
@@ -39,9 +50,10 @@ def infer(
     data_graph.remove((None, OWL.imports, None))
     # remove imports from ontologies too
     if ontologies:
-        ontologies.remove((None, OWL.imports, None))
+        ontology_imports = ontologies.remove((None, OWL.imports, None))
     else:
         ontologies = Graph()
+        ontology_imports = []
 
     # Use a temporary directory to store intermediate RDF files
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -64,6 +76,7 @@ def infer(
 
             # Run TopQuadrant SHACL inference
             inferred_graph_result = tqinfer(target_file_path)
+            inferred_graph_result.stdout = clean_stdout(inferred_graph_result.stdout)
             # read the inferred graph from the stdout of the completed process
             inferred_graph = Graph().parse(
                 data=inferred_graph_result.stdout, format="turtle"
@@ -77,6 +90,9 @@ def infer(
     # re-add imports that were removed earlier
     for imp in imports:
         data_graph.add(imp)
+    if ontologies:
+        for imp in ontology_imports:
+            ontologies.add(imp)
     return data_graph
 
 
@@ -112,7 +128,9 @@ def validate(
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
     if shape_graphs:
-        shape_graphs.remove((None, OWL.imports, None))
+        shape_imports = shape_graphs.remove((None, OWL.imports, None))
+    else:
+        shape_imports = []
 
     # Use a temporary directory to store intermediate RDF files
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -128,10 +146,14 @@ def validate(
 
         # Run the TopQuadrant SHACL validation engine
         validation_result = tqvalidate(data_graph_path)
+        validation_result.stdout = clean_stdout(validation_result.stdout)
 
     # re-add imports that were removed earlier
     for imp in imports:
         data_graph.add(imp)
+    if shape_graphs:
+        for imp in shape_imports:
+            shape_graphs.add(imp)
 
     # Parse the validation report into an RDF graph
     report_g = Graph()
