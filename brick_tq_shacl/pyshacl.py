@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 from typing import Tuple, Optional
 from rdflib import Graph, OWL, SH, Literal
+from rdflib.namespace import RDF
 
 
 def clean_stdout(stdout: str) -> str:
@@ -96,6 +97,70 @@ def infer(
     return data_graph
 
 
+def pretty_print_report(report_g: Graph) -> str:
+    """
+    Pretty prints a SHACL validation report graph.
+
+    Args:
+        report_g (Graph): The validation report graph.
+
+    Returns:
+        str: A formatted string representation of the report.
+    """
+    report_node = next(report_g.subjects(RDF.type, SH.ValidationReport), None)
+    if not report_node:
+        return "No validation report found in the graph."
+
+    conforms = bool(report_g.value(report_node, SH.conforms))
+    output_lines = [f"Validation Report"]
+    output_lines.append(f"Conforms: {conforms}")
+
+    results = list(report_g.objects(report_node, SH.result))
+
+    if not conforms and results:
+        output_lines.append(f"\nValidation Results ({len(results)}):")
+        for i, result_node in enumerate(results, 1):
+            output_lines.append(f"\n--- Result {i} ---")
+
+            severity = report_g.value(result_node, SH.resultSeverity)
+            if severity:
+                output_lines.append(
+                    f"Severity: {report_g.namespace_manager.normalizeUri(severity)}"
+                )
+
+            focus_node = report_g.value(result_node, SH.focusNode)
+            if focus_node:
+                output_lines.append(
+                    f"Focus Node: {focus_node.n3(report_g.namespace_manager)}"
+                )
+
+            message = report_g.value(result_node, SH.resultMessage)
+            if message:
+                output_lines.append(f"Message: {message}")
+
+            path = report_g.value(result_node, SH.resultPath)
+            if path:
+                output_lines.append(f"Path: {path.n3(report_g.namespace_manager)}")
+
+            value = report_g.value(result_node, SH.value)
+            if value:
+                output_lines.append(f"Value: {value.n3(report_g.namespace_manager)}")
+
+            scc = report_g.value(result_node, SH.sourceConstraintComponent)
+            if scc:
+                output_lines.append(
+                    f"Source Constraint: {report_g.namespace_manager.normalizeUri(scc)}"
+                )
+
+            source_shape = report_g.value(result_node, SH.sourceShape)
+            if source_shape:
+                output_lines.append(
+                    f"Source Shape: {source_shape.n3(report_g.namespace_manager)}"
+                )
+
+    return "\n".join(output_lines)
+
+
 def validate(
     data_graph: Graph, shape_graphs: Optional[Graph] = None
 ) -> Tuple[bool, str, Graph]:
@@ -169,4 +234,4 @@ def validate(
     validates = not has_violation or conforms
 
     # pyshacl returns: conforms, results_graph, results_text
-    return validates, report_g, str(report_g.serialize(format="turtle"))
+    return validates, report_g, pretty_print_report(report_g)
