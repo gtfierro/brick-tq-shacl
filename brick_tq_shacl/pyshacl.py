@@ -168,4 +168,5 @@ def validate(
     conforms = len(list(report_g.subjects(predicate=SH.conforms, object=Literal(True))))
     validates = not has_violation or conforms
 
-    return validates, str(report_g.serialize(format="turtle")), report_g
+    # pyshacl returns: conforms, results_graph, results_text
+    return validates, report_g, str(report_g.serialize(format="turtle"))
