@@ -70,7 +70,6 @@ def infer(
 
         # Iteratively apply inference until no new triples are generated
         while data_graph_size_changed and current_iteration < max_iterations:
-            print(f"Data graph size: {data_graph_size}")
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
             (data_graph + ontologies).serialize(target_file_path, format="turtle")
