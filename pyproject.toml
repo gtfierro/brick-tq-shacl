@@ -1,18 +1,20 @@
-[tool.poetry]
+[project]
 name = "brick-tq-shacl"
 version = "0.4.0-a8"
-description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper"
-authors = ["Gabe Fierro <gtfierro@mines.edu>"]
+requires-python = ">=3.9,<4.0"
+description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper to be API-compatible with pySHACL"
+authors = [
+    { name = "Gabe Fierro", email = "gtfierro@mines.edu" }
+]
 include = ["brick_tq_shacl/topquadrant_shacl"]
 license = "bsd-3-clause"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">=3.8.1,<4.0"
-rdflib = "^7.0"
-pytqshacl = { version = "^140"}
-
+dependencies = [
+    "rdflib>=7.0",
+    "pytqshacl>=140",
+    "pyontoenv>=0.3.1a1",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+build-backend  = 'hatchling.build'
+requires       = ['hatchling']
