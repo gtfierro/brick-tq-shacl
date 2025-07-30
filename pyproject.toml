@@ -6,7 +6,6 @@ description = "Wraps topquadrant's SHACL implementation in a simple Python wrapp
 authors = [
     { name = "Gabe Fierro", email = "gtfierro@mines.edu" }
 ]
-include = ["brick_tq_shacl/topquadrant_shacl"]
 license = "bsd-3-clause"
 readme = "README.md"
 dependencies = [
