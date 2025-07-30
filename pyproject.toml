@@ -1,6 +1,6 @@
 [project]
 name = "brick-tq-shacl"
-version = "0.4.0-a8"
+version = "0.4.0"
 requires-python = ">=3.9,<4.0"
 description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper to be API-compatible with pySHACL"
 authors = [
