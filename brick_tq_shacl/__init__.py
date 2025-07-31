@@ -19,7 +19,10 @@ def clean_stdout(stdout: str) -> str:
 
 
 def infer(
-    data_graph: Graph, ontologies: Optional[Graph] = None, max_iterations: int = 100
+    data_graph: Graph,
+    ontologies: Optional[Graph] = None,
+    min_iterations: int = 0,
+    max_iterations: int = 100,
 ) -> Graph:
     """
     Performs SHACL-based inference on a data graph using a set of ontologies.
@@ -37,6 +40,7 @@ def infer(
                                       definitions to guide the inference process. If not
                                       provided, `data_graph` is assumed to contain the
                                       ontologies.
+        min_iterations (int): The minimum number of inference iterations.
         max_iterations (int): The maximum number of inference iterations.
 
     Returns:
@@ -65,7 +69,9 @@ def infer(
         current_iteration = 0
 
         # Iteratively apply inference until no new triples are generated
-        while data_graph_size_changed and current_iteration < max_iterations:
+        while (
+            data_graph_size_changed or current_iteration < min_iterations
+        ) and current_iteration < max_iterations:
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
             (data_graph + ontologies).serialize(target_file_path, format="turtle")
