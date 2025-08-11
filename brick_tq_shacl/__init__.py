@@ -22,7 +22,7 @@ def infer(
     data_graph: Graph,
     ontologies: Optional[Graph] = None,
     min_iterations: int = 0,
-    max_iterations: int = 100,
+    max_iterations: int = 10,
 ) -> Graph:
     """
     Performs SHACL-based inference on a data graph using a set of ontologies.
@@ -49,6 +49,7 @@ def infer(
     # remove imports to treat graphs as self-contained
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
+    data_graph = data_graph.skolemize()
     # remove imports from ontologies too
     if ontologies:
         ontology_imports = ontologies.remove((None, OWL.imports, None))
@@ -95,7 +96,7 @@ def infer(
     if ontologies:
         for imp in ontology_imports:
             ontologies.add(imp)
-    return data_graph
+    return data_graph.de_skolemize()
 
 
 def pretty_print_report(report_g: Graph) -> str:
