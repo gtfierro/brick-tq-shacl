@@ -21,7 +21,7 @@ def clean_stdout(stdout: str) -> str:
 def infer(
     data_graph: Graph,
     ontologies: Optional[Graph] = None,
-    min_iterations: int = 0,
+    min_iterations: int = 1,
     max_iterations: int = 10,
 ) -> Graph:
     """
@@ -164,7 +164,8 @@ def pretty_print_report(report_g: Graph) -> str:
 
 
 def validate(
-    data_graph: Graph, shape_graphs: Optional[Graph] = None
+    data_graph: Graph, shape_graphs: Optional[Graph] = None,
+    min_iterations: int = 1, max_iterations: int = 10
 ) -> Tuple[bool, str, Graph]:
     """
     Validates a data graph against a set of SHACL shapes.
@@ -189,7 +190,8 @@ def validate(
     """
     # First, perform inference on the data graph using the shape graphs as ontologies.
     # This materializes triples that may be needed for validation.
-    data_graph = infer(data_graph, shape_graphs)
+    data_graph = infer(data_graph, shape_graphs,
+                       min_iterations=min_iterations, max_iterations=max_iterations)
 
     # remove imports to treat graphs as self-contained
     imports = list(data_graph.triples((None, OWL.imports, None)))
