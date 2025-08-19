@@ -175,7 +175,7 @@ def pretty_print_report(report_g: Graph) -> str:
 def validate(
     data_graph: Graph, shape_graphs: Optional[Graph] = None,
     min_iterations: int = 1, max_iterations: int = 10
-) -> Tuple[bool, str, Graph]:
+) -> Tuple[bool, Graph, str]:
     """
     Validates a data graph against a set of SHACL shapes.
 
@@ -194,10 +194,10 @@ def validate(
         max_iterations (int): The maximum number of inference iterations.
 
     Returns:
-        Tuple[bool, str, Graph]: A tuple containing:
+        Tuple[bool, Graph, str]: A tuple containing:
             - A boolean indicating if the graph conforms to the shapes.
-            - A human-readable string representation of the validation report.
             - The validation report graph itself (rdflib.Graph).
+            - A human-readable string representation of the validation report.
     """
     # First, perform inference on the data graph using the shape graphs as ontologies.
     # This materializes triples that may be needed for validation.
@@ -249,4 +249,4 @@ def validate(
     conforms = len(list(report_g.subjects(predicate=SH.conforms, object=Literal(True))))
     validates = not has_violation or conforms
 
-    return validates, pretty_print_report(report_g), report_g
+    return validates, report_g, pretty_print_report(report_g)
