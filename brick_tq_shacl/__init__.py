@@ -181,6 +181,8 @@ def validate(
         shape_graphs (Optional[Graph]): A graph containing the SHACL shapes. If not
                                         provided, `data_graph` is assumed to contain
                                         the shapes.
+        min_iterations (int): The minimum number of inference iterations.
+        max_iterations (int): The maximum number of inference iterations.
 
     Returns:
         Tuple[bool, str, Graph]: A tuple containing:
