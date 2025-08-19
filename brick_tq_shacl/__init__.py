@@ -1,3 +1,10 @@
+"""brick-tq-shacl public API.
+
+Provides SHACL-based inference and validation utilities on top of the
+TopQuadrant SHACL engine (pytqshacl) for rdflib.Graph objects.
+
+Version: 0.4.0
+"""
 from pytqshacl import infer as tqinfer, validate as tqvalidate
 from pathlib import Path
 import tempfile
@@ -6,6 +13,7 @@ from rdflib import Graph, OWL, SH, Literal
 from rdflib.namespace import RDF
 
 __version__ = "0.4.0"
+__all__ = ["infer", "validate", "pretty_print_report", "__version__"]
 
 def clean_stdout(stdout: str) -> str:
     """
@@ -52,7 +60,8 @@ def infer(
     data_graph = data_graph.skolemize()
     # remove imports from ontologies too
     if ontologies:
-        ontology_imports = ontologies.remove((None, OWL.imports, None))
+        ontology_imports = list(ontologies.triples((None, OWL.imports, None)))
+        ontologies.remove((None, OWL.imports, None))
     else:
         ontologies = Graph()
         ontology_imports = []
@@ -187,7 +196,7 @@ def validate(
     Returns:
         Tuple[bool, str, Graph]: A tuple containing:
             - A boolean indicating if the graph conforms to the shapes.
-            - A string serialization of the validation report graph.
+            - A human-readable string representation of the validation report.
             - The validation report graph itself (rdflib.Graph).
     """
     # First, perform inference on the data graph using the shape graphs as ontologies.
@@ -199,7 +208,8 @@ def validate(
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
     if shape_graphs:
-        shape_imports = shape_graphs.remove((None, OWL.imports, None))
+        shape_imports = list(shape_graphs.triples((None, OWL.imports, None)))
+        shape_graphs.remove((None, OWL.imports, None))
     else:
         shape_imports = []
 
@@ -239,5 +249,4 @@ def validate(
     conforms = len(list(report_g.subjects(predicate=SH.conforms, object=Literal(True))))
     validates = not has_violation or conforms
 
-    # pyshacl returns: conforms, results_graph, results_text
-    return validates, report_g, pretty_print_report(report_g)
+    return validates, pretty_print_report(report_g), report_g
