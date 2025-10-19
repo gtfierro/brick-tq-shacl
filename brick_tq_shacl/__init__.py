@@ -91,7 +91,10 @@ def infer(
             (data_graph + ontologies).serialize(target_file_path, format="turtle")
 
             # Run TopQuadrant SHACL inference
-            inferred_graph_result = tqinfer(target_file_path)
+            inferred_graph_result = tqinfer(
+                target_file_path,
+                tool_args=("-maxiterations", "10", "-addBlankNodes", "-noImports"),
+            )
             inferred_graph_result.stdout = clean_stdout(inferred_graph_result.stdout)
             # read the inferred graph from the stdout of the completed process
             inferred_graph = Graph().parse(
@@ -246,7 +249,10 @@ def validate(
         graph_to_validate.serialize(data_graph_path, format="turtle")
 
         # Run the TopQuadrant SHACL validation engine
-        validation_result = tqvalidate(data_graph_path)
+        validation_result = tqvalidate(
+            data_graph_path,
+            tool_args=("-maxiterations", "10", "-addBlankNodes", "-noImports"),
+        )
         validation_result.stdout = clean_stdout(validation_result.stdout)
 
     # re-add imports that were removed earlier
