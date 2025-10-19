@@ -31,6 +31,7 @@ def infer(
     ontologies: Optional[Graph] = None,
     min_iterations: int = 1,
     max_iterations: int = 10,
+    early_isomorphic_exit: bool = False,
 ) -> Graph:
     """
     Performs SHACL-based inference on a data graph using a set of ontologies.
@@ -50,6 +51,8 @@ def infer(
                                       ontologies.
         min_iterations (int): The minimum number of inference iterations.
         max_iterations (int): The maximum number of inference iterations.
+        early_isomorphic_exit (bool): Stop iterating once consecutive inferred
+            graphs are isomorphic when True.
 
     Returns:
         Graph: The data graph enriched with inferred triples.
@@ -77,6 +80,7 @@ def infer(
         data_graph_size = len(data_graph)
         data_graph_size_changed = True
         current_iteration = 0
+        previous_inferred_graph: Optional[Graph] = None
 
         # Iteratively apply inference until no new triples are generated
         while (
@@ -93,6 +97,12 @@ def infer(
             inferred_graph = Graph().parse(
                 data=inferred_graph_result.stdout, format="turtle"
             )
+            if early_isomorphic_exit and (
+                previous_inferred_graph is not None
+                and inferred_graph.isomorphic(previous_inferred_graph)
+            ):
+                break
+            previous_inferred_graph = inferred_graph
             data_graph += inferred_graph
 
             # Check if the graph size has changed to continue or stop iterating
@@ -173,8 +183,11 @@ def pretty_print_report(report_g: Graph) -> str:
 
 
 def validate(
-    data_graph: Graph, shape_graphs: Optional[Graph] = None,
-    min_iterations: int = 1, max_iterations: int = 10
+    data_graph: Graph,
+    shape_graphs: Optional[Graph] = None,
+    min_iterations: int = 1,
+    max_iterations: int = 10,
+    early_isomorphic_exit: bool = False,
 ) -> Tuple[bool, Graph, str]:
     """
     Validates a data graph against a set of SHACL shapes.
@@ -192,6 +205,8 @@ def validate(
                                         the shapes.
         min_iterations (int): The minimum number of inference iterations.
         max_iterations (int): The maximum number of inference iterations.
+        early_isomorphic_exit (bool): Stop inference iterations early when
+            consecutive inferred graphs are isomorphic if True.
 
     Returns:
         Tuple[bool, Graph, str]: A tuple containing:
@@ -201,8 +216,13 @@ def validate(
     """
     # First, perform inference on the data graph using the shape graphs as ontologies.
     # This materializes triples that may be needed for validation.
-    data_graph = infer(data_graph, shape_graphs,
-                       min_iterations=min_iterations, max_iterations=max_iterations)
+    data_graph = infer(
+        data_graph,
+        shape_graphs,
+        min_iterations=min_iterations,
+        max_iterations=max_iterations,
+        early_isomorphic_exit=early_isomorphic_exit,
+    )
 
     # remove imports to treat graphs as self-contained
     imports = list(data_graph.triples((None, OWL.imports, None)))
