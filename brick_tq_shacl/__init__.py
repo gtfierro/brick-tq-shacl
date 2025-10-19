@@ -11,6 +11,7 @@ import tempfile
 from typing import Tuple, Optional
 from rdflib import Graph, OWL, SH, Literal
 from rdflib.namespace import RDF
+from ._java import ensure_java_runtime
 
 __version__ = "0.4.0"
 __all__ = ["infer", "validate", "pretty_print_report", "__version__"]
@@ -54,6 +55,7 @@ def infer(
     Returns:
         Graph: The data graph enriched with inferred triples.
     """
+    ensure_java_runtime()
     # remove imports to treat graphs as self-contained
     imports = list(data_graph.triples((None, OWL.imports, None)))
     data_graph.remove((None, OWL.imports, None))
@@ -199,6 +201,7 @@ def validate(
             - The validation report graph itself (rdflib.Graph).
             - A human-readable string representation of the validation report.
     """
+    ensure_java_runtime()
     # First, perform inference on the data graph using the shape graphs as ontologies.
     # This materializes triples that may be needed for validation.
     data_graph = infer(data_graph, shape_graphs,

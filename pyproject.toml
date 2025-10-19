@@ -14,6 +14,11 @@ dependencies = [
     "pyontoenv>=0.3.1a1",
 ]
 
+[project.optional-dependencies]
+withjre = [
+    "install-jdk>=1.1.0",
+]
+
 [build-system]
 build-backend  = 'hatchling.build'
 requires       = ['hatchling']
