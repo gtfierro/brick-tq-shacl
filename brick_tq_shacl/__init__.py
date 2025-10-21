@@ -81,9 +81,14 @@ def infer(
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
 
-        # write all ontologies to a new tempfile
-        ontologies_file_path = temp_dir_path / "ontologies.ttl"
-        ontologies.serialize(ontologies_file_path, format=_SERIALIZE_FORMAT)
+        target_file_path = temp_dir_path / "data.ttl"
+        working_graph = Graph()
+        working_graph.namespace_manager = data_graph.namespace_manager
+        working_graph += data_graph
+        if ontologies:
+            working_graph += ontologies
+            for prefix, namespace in ontologies.namespace_manager.namespaces():
+                working_graph.namespace_manager.bind(prefix, namespace, replace=False)
 
         data_graph_size = len(data_graph)
         data_graph_size_changed = True
@@ -94,11 +99,8 @@ def infer(
         while (
             data_graph_size_changed or current_iteration < min_iterations
         ) and current_iteration < max_iterations:
-            # write data_graph to a tempfile
-            target_file_path = temp_dir_path / "data.ttl"
-            (data_graph + ontologies).serialize(
-                target_file_path, format=_SERIALIZE_FORMAT
-            )
+            # write combined data and ontologies to a tempfile without rebuilding each time
+            working_graph.serialize(target_file_path, format=_SERIALIZE_FORMAT)
 
             # Run TopQuadrant SHACL inference
             inferred_graph_result = tqinfer(
@@ -117,6 +119,7 @@ def infer(
                 break
             previous_inferred_graph = inferred_graph
             data_graph += inferred_graph
+            working_graph += inferred_graph
 
             # Check if the graph size has changed to continue or stop iterating
             data_graph_size_changed = len(data_graph) != data_graph_size
