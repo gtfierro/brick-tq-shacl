@@ -103,7 +103,7 @@ def infer(
             # Run TopQuadrant SHACL inference
             inferred_graph_result = tqinfer(
                 target_file_path,
-                tool_args=("-maxiterations", "10"),
+                tool_args=("-maxiterations", "10", "-addBlankNodes", "-noImports"),
             )
             inferred_graph_result.stdout = clean_stdout(inferred_graph_result.stdout)
             # read the inferred graph from the stdout of the completed process
