@@ -5,12 +5,20 @@ TopQuadrant SHACL engine (pytqshacl) for rdflib.Graph objects.
 
 Version: 0.4.0
 """
-from pytqshacl import infer as tqinfer, validate as tqvalidate
-from pathlib import Path
 import tempfile
-from typing import Tuple, Optional
-from rdflib import Graph, OWL, SH, Literal
+from pathlib import Path
+from typing import Optional, Tuple
+
+from pytqshacl import infer as tqinfer, validate as tqvalidate
+from rdflib import Graph, Literal, OWL, SH
 from rdflib.namespace import RDF
+
+try:
+    import oxrdflib  # type: ignore  # noqa: F401 - ensures Oxigraph plugins register
+
+    _SERIALIZE_FORMAT = "ox-ttl"
+except ImportError:
+    _SERIALIZE_FORMAT = "turtle"
 
 __version__ = "0.4.0"
 __all__ = ["infer", "validate", "pretty_print_report", "__version__"]
@@ -75,7 +83,7 @@ def infer(
 
         # write all ontologies to a new tempfile
         ontologies_file_path = temp_dir_path / "ontologies.ttl"
-        ontologies.serialize(ontologies_file_path, format="turtle")
+        ontologies.serialize(ontologies_file_path, format=_SERIALIZE_FORMAT)
 
         data_graph_size = len(data_graph)
         data_graph_size_changed = True
@@ -88,12 +96,14 @@ def infer(
         ) and current_iteration < max_iterations:
             # write data_graph to a tempfile
             target_file_path = temp_dir_path / "data.ttl"
-            (data_graph + ontologies).serialize(target_file_path, format="turtle")
+            (data_graph + ontologies).serialize(
+                target_file_path, format=_SERIALIZE_FORMAT
+            )
 
             # Run TopQuadrant SHACL inference
             inferred_graph_result = tqinfer(
                 target_file_path,
-                tool_args=("-maxiterations", "10", "-noImports"),
+                tool_args=("-maxiterations", "10"),
             )
             inferred_graph_result.stdout = clean_stdout(inferred_graph_result.stdout)
             # read the inferred graph from the stdout of the completed process
@@ -246,7 +256,7 @@ def validate(
         graph_to_validate = data_graph
         if shape_graphs:
             graph_to_validate = graph_to_validate + shape_graphs
-        graph_to_validate.serialize(data_graph_path, format="turtle")
+        graph_to_validate.serialize(data_graph_path, format=_SERIALIZE_FORMAT)
 
         # Run the TopQuadrant SHACL validation engine
         validation_result = tqvalidate(

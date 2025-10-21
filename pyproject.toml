@@ -14,12 +14,16 @@ dependencies = [
     "pytqshacl[cli]",
     "pyontoenv>=0.3.1a1",
     "requests>=2.32.5",
+    "oxrdflib>=0.5.0",
 ]
+
+[project.optional-dependencies]
+oxrdflib = ["oxrdflib>=0.3"]
 
 [build-system]
 build-backend  = 'hatchling.build'
 requires       = ['hatchling']
 
 [tool.uv.sources]
+#pytqshacl = { path = "../software/pytqshacl", package = true}
 pytqshacl = { git = "https://github.com/gtfierro/pytqshacl" }
-
