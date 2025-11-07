@@ -15,13 +15,14 @@ from rdflib.namespace import RDF
 __version__ = "0.4.0"
 __all__ = ["infer", "validate", "pretty_print_report", "__version__"]
 
+
 def clean_stdout(stdout: str) -> str:
     """
     Cleans stdout by removing lines that get emitted by TopQuadrant.
     """
     lines = stdout.splitlines()
     cleaned_lines = [
-            line for line in lines if not line.startswith("WARNING:") and not line.startswith("INFO:")
+            line for line in lines if "::" not in line
     ]
     return "\n".join(cleaned_lines)
 
