@@ -1,0 +1,15 @@
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+<urn:fixtures/brick_rules> a owl:Ontology .
+
+brick:CO2_Level_Sensor a sh:NodeShape ;
+    sh:targetClass brick:CO2_Level_Sensor ;
+    sh:rule [
+        a sh:TripleRule ;
+        sh:subject sh:this ;
+        sh:predicate rdf:type ;
+        sh:object brick:Air_Quality_Sensor ;
+    ] .

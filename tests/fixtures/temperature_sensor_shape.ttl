@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+
+brick:TemperatureSensorShape a sh:NodeShape ;
+    sh:targetClass brick:Air_Temperature_Sensor ;
+    sh:property [
+        sh:path brick:hasUnit ;
+        sh:minCount 1 ;
+    ] .

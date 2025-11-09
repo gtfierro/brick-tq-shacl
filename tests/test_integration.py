@@ -19,28 +19,18 @@ pytestmark = pytest.mark.skipif(
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_FIXTURE = ROOT / "air_quality_sensor_example.ttl"
-BRICK_FIXTURE = ROOT / "Brick.ttl"
+FIXTURE_DIR = ROOT / "tests" / "fixtures"
+DATA_FIXTURE = FIXTURE_DIR / "sample_building.ttl"
+BRICK_FIXTURE = FIXTURE_DIR / "brick_rules.ttl"
+SENSOR_SHAPES_FIXTURE = FIXTURE_DIR / "temperature_sensor_shape.ttl"
 
 BRICK = Namespace("https://brickschema.org/schema/Brick#")
 EX = Namespace("urn:example#")
 
-SENSOR_SHAPE_TTL = """
-@prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix brick: <https://brickschema.org/schema/Brick#> .
-
-brick:TemperatureSensorShape a sh:NodeShape ;
-    sh:targetClass brick:Air_Temperature_Sensor ;
-    sh:property [
-        sh:path brick:hasUnit ;
-        sh:minCount 1 ;
-    ] .
-"""
-
 
 def _temperature_sensor_shapes() -> Graph:
     shapes = Graph()
-    shapes.parse(data=SENSOR_SHAPE_TTL, format="turtle")
+    shapes.parse(SENSOR_SHAPES_FIXTURE, format="turtle")
     return shapes
 
 
@@ -48,6 +38,26 @@ def _load_sample_graph() -> Graph:
     graph = Graph()
     graph.parse(DATA_FIXTURE, format="turtle")
     return graph
+
+
+def _load_brick_rules() -> Graph:
+    graph = Graph()
+    graph.parse(BRICK_FIXTURE, format="turtle")
+    return graph
+
+
+def test_infer_adds_air_quality_type() -> None:
+    data_graph = _load_sample_graph()
+    brick_graph = _load_brick_rules()
+
+    inferred_graph = infer(data_graph, brick_graph, min_iterations=1, max_iterations=2)
+
+    assert (EX["co2_sensor"], RDF.type, BRICK.Air_Quality_Sensor) in inferred_graph
+    assert (
+        URIRef("urn:example"),
+        OWL.imports,
+        URIRef("urn:fixtures/brick_rules"),
+    ) in inferred_graph
 
 
 def test_validate_detects_missing_units() -> None:
