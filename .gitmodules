@@ -1,0 +1,3 @@
+[submodule "brick_tq_shacl/_vendor/pytqshacl"]
+	path = brick_tq_shacl/_vendor/pytqshacl
+	url = https://github.com/gtfierro/pytqshacl.git

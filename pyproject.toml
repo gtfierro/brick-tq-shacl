@@ -1,6 +1,6 @@
 [project]
 name = "brick-tq-shacl"
-version = "0.4.1a2"
+version = "0.4.1a3"
 requires-python = ">=3.9,<4.0"
 description = "Wraps topquadrant's SHACL implementation in a simple Python wrapper to be API-compatible with pySHACL"
 authors = [
@@ -10,7 +10,6 @@ license = "bsd-3-clause"
 readme = "README.md"
 dependencies = [
     "rdflib>=7.0",
-    "pytqshacl[cli]",
     "pyontoenv>=0.3.1a1",
     "requests>=2.32.5",
 ]
@@ -24,10 +23,10 @@ test = [
 build-backend  = 'hatchling.build'
 requires       = ['hatchling']
 
-[tool.uv.sources]
-pytqshacl = { git = "https://github.com/gtfierro/pytqshacl" }
-
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
 ]
+
+[tool.hatch]
+metadata.allow-direct-references = true

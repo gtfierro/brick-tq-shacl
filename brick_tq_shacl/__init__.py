@@ -5,12 +5,28 @@ TopQuadrant SHACL engine (pytqshacl) for rdflib.Graph objects.
 
 Version: 0.4.0
 """
-from pytqshacl import infer as tqinfer, validate as tqvalidate
+import sys
+from importlib import import_module
 from pathlib import Path
 import tempfile
 from typing import Tuple, Optional
 from rdflib import Graph, OWL, SH, Literal
 from rdflib.namespace import RDF
+
+try:
+    pytqshacl = import_module("pytqshacl")
+except ModuleNotFoundError:  # pragma: no cover - runtime dependency check
+    vendor_src = Path(__file__).with_name("_vendor") / "pytqshacl" / "src"
+    if not vendor_src.is_dir():
+        raise
+    vendor_src_str = str(vendor_src.resolve())
+    if vendor_src_str not in sys.path:
+        sys.path.insert(0, vendor_src_str)
+    pytqshacl = import_module("pytqshacl")
+    sys.modules.setdefault("pytqshacl", pytqshacl)
+
+tqinfer = pytqshacl.infer
+tqvalidate = pytqshacl.validate
 
 __version__ = "0.4.0"
 __all__ = ["infer", "validate", "pretty_print_report", "__version__"]
